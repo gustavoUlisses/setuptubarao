@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:docs.asaas.com)"
+      "WebFetch(domain:docs.asaas.com)",
+      "Bash(vercel --prod --yes)"
     ]
   }
 }
