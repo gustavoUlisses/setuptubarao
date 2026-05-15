@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { findOrCreateCustomer, createCharge } from "@/lib/asaas";
+import { findOrCreateCustomer, createPixCharge, createCardCharge } from "@/lib/asaas";
 
 const checkoutSchema = z.object({
   name: z.string().min(2).max(100).trim(),
   email: z.string().email().max(254).toLowerCase().trim(),
-  cpfCnpj: z.string().min(11).max(18).trim().transform((v) => v.replace(/\D/g, "")),
+  method: z.enum(["PIX", "CARD"]).default("PIX"),
 });
 
 export async function POST(req: NextRequest) {
   let body: unknown;
-
   try {
     body = await req.json();
   } catch {
@@ -25,16 +24,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { name, email, cpfCnpj } = parsed.data;
+  const { name, email, method } = parsed.data;
 
   try {
-    const customerId = await findOrCreateCustomer(name, email, cpfCnpj);
-    const { paymentId, invoiceUrl } = await createCharge(
-      customerId,
-      "SetupTubarão — Licença de uso"
-    );
+    const customerId = await findOrCreateCustomer(name, email);
 
-    return NextResponse.json({ paymentId, invoiceUrl });
+    if (method === "PIX") {
+      const { paymentId, qrCode } = await createPixCharge(customerId);
+      return NextResponse.json({ method: "PIX", paymentId, qrCode });
+    } else {
+      const { paymentId, invoiceUrl } = await createCardCharge(customerId);
+      return NextResponse.json({ method: "CARD", paymentId, invoiceUrl });
+    }
   } catch (err) {
     console.error("[checkout] error:", err instanceof Error ? err.message : "unknown");
     return NextResponse.json(

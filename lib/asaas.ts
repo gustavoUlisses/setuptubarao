@@ -17,10 +17,16 @@ export interface AsaasPayment {
   value: number;
   dueDate: string;
   description: string;
+  status: string;
   invoiceUrl?: string;
   bankSlipUrl?: string;
   pixQrCodeId?: string;
-  status: string;
+}
+
+export interface AsaasPixQrCode {
+  encodedImage: string;
+  payload: string;
+  expirationDate: string;
 }
 
 async function asaasRequest<T>(
@@ -46,11 +52,10 @@ async function asaasRequest<T>(
 
 export async function findOrCreateCustomer(
   name: string,
-  email: string,
-  cpfCnpj: string
+  email: string
 ): Promise<string> {
   const search = await asaasRequest<{ data: AsaasCustomer[] }>(
-    `/customers?cpfCnpj=${encodeURIComponent(cpfCnpj)}&limit=1`
+    `/customers?email=${encodeURIComponent(email)}&limit=1`
   );
 
   if (search.data.length > 0) {
@@ -59,19 +64,45 @@ export async function findOrCreateCustomer(
 
   const customer = await asaasRequest<AsaasCustomer>("/customers", {
     method: "POST",
-    body: JSON.stringify({ name, email, cpfCnpj }),
+    body: JSON.stringify({ name, email }),
   });
 
   return customer.id;
 }
 
-export async function createCharge(
-  customerId: string,
-  description: string
+export async function createPixCharge(
+  customerId: string
+): Promise<{ paymentId: string; qrCode: AsaasPixQrCode }> {
+  const priceCents = parseInt(process.env.PRODUCT_PRICE_CENTS!, 10);
+  const value = priceCents / 100;
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 1);
+  const dueDateStr = dueDate.toISOString().split("T")[0];
+
+  const payment = await asaasRequest<AsaasPayment>("/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: customerId,
+      billingType: "PIX",
+      value,
+      dueDate: dueDateStr,
+      description: "SetupTubarão — Licença de uso",
+      externalReference: process.env.PRODUCT_ID,
+    }),
+  });
+
+  const qrCode = await asaasRequest<AsaasPixQrCode>(
+    `/payments/${payment.id}/pixQrCode`
+  );
+
+  return { paymentId: payment.id, qrCode };
+}
+
+export async function createCardCharge(
+  customerId: string
 ): Promise<{ paymentId: string; invoiceUrl: string }> {
   const priceCents = parseInt(process.env.PRODUCT_PRICE_CENTS!, 10);
   const value = priceCents / 100;
-
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 1);
   const dueDateStr = dueDate.toISOString().split("T")[0];
@@ -83,7 +114,7 @@ export async function createCharge(
       billingType: "UNDEFINED",
       value,
       dueDate: dueDateStr,
-      description,
+      description: "SetupTubarão — Licença de uso",
       externalReference: process.env.PRODUCT_ID,
     }),
   });
@@ -94,9 +125,18 @@ export async function createCharge(
   };
 }
 
-export async function getCustomerEmail(customerId: string): Promise<string | undefined> {
+export async function getPaymentStatus(paymentId: string): Promise<string> {
+  const payment = await asaasRequest<AsaasPayment>(`/payments/${paymentId}`);
+  return payment.status;
+}
+
+export async function getCustomerEmail(
+  customerId: string
+): Promise<string | undefined> {
   try {
-    const customer = await asaasRequest<AsaasCustomer>(`/customers/${customerId}`);
+    const customer = await asaasRequest<AsaasCustomer>(
+      `/customers/${customerId}`
+    );
     return customer.email ?? undefined;
   } catch {
     return undefined;
@@ -107,7 +147,6 @@ export function verifyWebhookToken(token: string | null): boolean {
   if (!token) return false;
   const expected = process.env.ASAAS_WEBHOOK_TOKEN;
   if (!expected) return false;
-  // Compara em tempo constante para evitar timing attacks
   if (token.length !== expected.length) return false;
   let diff = 0;
   for (let i = 0; i < token.length; i++) {
