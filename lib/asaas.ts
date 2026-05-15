@@ -98,9 +98,26 @@ export async function createPixCharge(
   return { paymentId: payment.id, qrCode };
 }
 
-export async function createCardCharge(
-  customerId: string
-): Promise<{ paymentId: string; invoiceUrl: string }> {
+interface CreditCardData {
+  holderName: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  ccv: string;
+  holderInfo: {
+    name: string;
+    email: string;
+    cpfCnpj: string;
+    phone: string;
+    postalCode: string;
+    addressNumber: string;
+  };
+}
+
+export async function createCreditCardCharge(
+  customerId: string,
+  card: CreditCardData
+): Promise<{ paymentId: string }> {
   const priceCents = parseInt(process.env.PRODUCT_PRICE_CENTS!, 10);
   const value = priceCents / 100;
   const dueDate = new Date();
@@ -111,18 +128,30 @@ export async function createCardCharge(
     method: "POST",
     body: JSON.stringify({
       customer: customerId,
-      billingType: "UNDEFINED",
+      billingType: "CREDIT_CARD",
       value,
       dueDate: dueDateStr,
       description: "SetupTubarão — Licença de uso",
       externalReference: process.env.PRODUCT_ID,
+      creditCard: {
+        holderName: card.holderName,
+        number: card.number,
+        expiryMonth: card.expiryMonth,
+        expiryYear: card.expiryYear,
+        ccv: card.ccv,
+      },
+      creditCardHolderInfo: {
+        name: card.holderInfo.name,
+        email: card.holderInfo.email,
+        cpfCnpj: card.holderInfo.cpfCnpj,
+        phone: card.holderInfo.phone,
+        postalCode: card.holderInfo.postalCode,
+        addressNumber: card.holderInfo.addressNumber,
+      },
     }),
   });
 
-  return {
-    paymentId: payment.id,
-    invoiceUrl: payment.invoiceUrl ?? "",
-  };
+  return { paymentId: payment.id };
 }
 
 export async function getPaymentStatus(paymentId: string): Promise<string> {
