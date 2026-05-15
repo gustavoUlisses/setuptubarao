@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyWebhookToken } from "@/lib/asaas";
+import { verifyWebhookToken, getCustomerEmail } from "@/lib/asaas";
 import { createDownloadToken, markPaymentProcessed } from "@/lib/tokens";
 import { sendDownloadEmail } from "@/lib/resend";
 
 const CONFIRMED_STATUSES = new Set(["RECEIVED", "CONFIRMED"]);
 
 export async function POST(req: NextRequest) {
-  const token = req.headers.get("asaas-access-token");
+  const token =
+    req.headers.get("asaas-access-token") ??
+    req.headers.get("access_token") ??
+    req.headers.get("authorization")?.replace("Bearer ", "");
 
-  if (!verifyWebhookToken(token)) {
+  if (!verifyWebhookToken(token ?? null)) {
+    console.error("[webhook] invalid token, received:", token?.slice(0, 20));
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -47,7 +51,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const email = payment.customerEmail;
+  // Asaas nem sempre inclui customerEmail no payload — busca via API se necessário
+  let email = payment.customerEmail;
+  if (!email && payment.customer) {
+    email = await getCustomerEmail(payment.customer);
+  }
+
   if (!email) {
     console.error("[webhook] missing email for payment", payment.id);
     return NextResponse.json({ error: "Missing customer email" }, { status: 400 });
@@ -55,7 +64,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const downloadToken = await createDownloadToken(payment.id, email);
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://setuptubarao.vercel.app";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://setupbigplayer.vercel.app";
     const downloadUrl = `${baseUrl}/api/download/${downloadToken}`;
 
     await sendDownloadEmail(email, downloadUrl);

@@ -94,9 +94,24 @@ export async function createCharge(
   };
 }
 
+export async function getCustomerEmail(customerId: string): Promise<string | null> {
+  try {
+    const customer = await asaasRequest<AsaasCustomer>(`/customers/${customerId}`);
+    return customer.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function verifyWebhookToken(token: string | null): boolean {
   if (!token) return false;
   const expected = process.env.ASAAS_WEBHOOK_TOKEN;
   if (!expected) return false;
-  return token === expected;
+  // Compara em tempo constante para evitar timing attacks
+  if (token.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < token.length; i++) {
+    diff |= token.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return diff === 0;
 }
