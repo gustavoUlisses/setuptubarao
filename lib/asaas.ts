@@ -37,7 +37,9 @@ async function asaasRequest<T>(
     ...options,
     headers: {
       "Content-Type": "application/json",
-      access_token: process.env.ASAAS_API_KEY!,
+      access_token: process.env.ASAAS_API_KEY!.startsWith("$")
+        ? process.env.ASAAS_API_KEY!
+        : `$${process.env.ASAAS_API_KEY!}`,
       ...(options.headers ?? {}),
     },
   });
