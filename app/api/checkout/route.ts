@@ -5,6 +5,7 @@ import { findOrCreateCustomer, createCharge } from "@/lib/asaas";
 const checkoutSchema = z.object({
   name: z.string().min(2).max(100).trim(),
   email: z.string().email().max(254).toLowerCase().trim(),
+  cpfCnpj: z.string().min(11).max(18).trim().transform((v) => v.replace(/\D/g, "")),
 });
 
 export async function POST(req: NextRequest) {
@@ -24,10 +25,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { name, email } = parsed.data;
+  const { name, email, cpfCnpj } = parsed.data;
 
   try {
-    const customerId = await findOrCreateCustomer(name, email);
+    const customerId = await findOrCreateCustomer(name, email, cpfCnpj);
     const { paymentId, invoiceUrl } = await createCharge(
       customerId,
       "SetupTubarão — Licença de uso"

@@ -48,6 +48,7 @@ export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [cpfCnpj, setCpfCnpj] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
@@ -79,7 +80,7 @@ export default function Home() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim() }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), cpfCnpj: cpfCnpj.trim() }),
       });
 
       const data = await res.json();
@@ -856,6 +857,39 @@ export default function Home() {
                   >
                     O link de download será enviado para este email.
                   </p>
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      color: "var(--muted)",
+                      marginBottom: "8px",
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  >
+                    CPF ou CNPJ
+                  </label>
+                  <input
+                    type="text"
+                    value={cpfCnpj}
+                    onChange={(e) => setCpfCnpj(e.target.value)}
+                    placeholder="000.000.000-00"
+                    required
+                    minLength={11}
+                    maxLength={18}
+                    autoComplete="off"
+                    className="input-field"
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px",
+                      borderRadius: "8px",
+                      fontSize: "15px",
+                    }}
+                  />
                 </div>
 
                 {error && (

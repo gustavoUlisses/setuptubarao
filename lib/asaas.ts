@@ -46,10 +46,11 @@ async function asaasRequest<T>(
 
 export async function findOrCreateCustomer(
   name: string,
-  email: string
+  email: string,
+  cpfCnpj: string
 ): Promise<string> {
   const search = await asaasRequest<{ data: AsaasCustomer[] }>(
-    `/customers?email=${encodeURIComponent(email)}&limit=1`
+    `/customers?cpfCnpj=${encodeURIComponent(cpfCnpj)}&limit=1`
   );
 
   if (search.data.length > 0) {
@@ -58,7 +59,7 @@ export async function findOrCreateCustomer(
 
   const customer = await asaasRequest<AsaasCustomer>("/customers", {
     method: "POST",
-    body: JSON.stringify({ name, email }),
+    body: JSON.stringify({ name, email, cpfCnpj }),
   });
 
   return customer.id;
