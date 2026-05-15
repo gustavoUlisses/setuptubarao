@@ -13,7 +13,7 @@ const BENEFITS = [
 
 const TICKER_ITEMS = ["SETUP EM MINUTOS", "SEM TUTORIAL DESATUALIZADO", "CONFIGURAÇÃO AUTOMÁTICA", "SUPORTE EM PT-BR", "PAGUE UMA VEZ", "PARA WSL · LINUX · MACOS"];
 
-type Step = "form" | "pix" | "card-form" | "card-processing" | "paid";
+type Step = "form" | "pix" | "card-form" | "card-holder" | "card-processing" | "paid";
 type PayMethod = "PIX" | "CARD";
 
 interface QrCode { encodedImage: string; payload: string; expirationDate: string; }
@@ -280,7 +280,7 @@ export default function Home() {
         <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
           <div onClick={() => { if (step === "form") setModalOpen(false); }} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }} className="animate-fade-in" />
 
-          <div className="animate-fade-up card" style={{ position: "relative", width: "100%", maxWidth: step === "card-form" ? "520px" : "440px", maxHeight: "90vh", overflowY: "auto", borderRadius: "16px", overflow: "hidden", boxShadow: "0 40px 100px rgba(0,0,0,0.8)" }}>
+          <div className="animate-fade-up card" style={{ position: "relative", width: "100%", maxWidth: "440px", maxHeight: "90vh", overflowY: "auto", borderRadius: "16px", overflow: "hidden", boxShadow: "0 40px 100px rgba(0,0,0,0.8)" }}>
             <div style={{ height: "4px", background: "var(--accent)", flexShrink: 0 }} />
             <div style={{ padding: "28px 32px" }}>
 
@@ -340,54 +340,84 @@ export default function Home() {
                 </>
               )}
 
-              {/* STEP: FORM CARTÃO */}
+              {/* STEP: CARTÃO — ETAPA 1: DADOS DO CARTÃO */}
               {step === "card-form" && (
                 <>
                   <button onClick={() => { setStep("form"); setError(""); }} style={{ position: "absolute", top: "16px", left: "16px", background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--muted)", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontFamily: "var(--font-mono)" }}>← voltar</button>
-                  <h2 style={{ fontSize: "18px", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: "20px", marginTop: "8px", textAlign: "center" }}>Dados do cartão</h2>
+                  <div style={{ textAlign: "center", marginBottom: "20px", marginTop: "8px" }}>
+                    <h2 style={{ fontSize: "18px", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: "4px" }}>Dados do cartão</h2>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--muted)", letterSpacing: "0.1em" }}>ETAPA 1 DE 2</span>
+                  </div>
 
-                  <form onSubmit={handleCardSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                     <div>
                       <label style={labelStyle}>NÚMERO DO CARTÃO</label>
-                      <input type="text" inputMode="numeric" value={cardNumber} onChange={(e) => setCardNumber(fmt(e.target.value, "card"))} placeholder="0000 0000 0000 0000" required maxLength={19} autoComplete="cc-number" className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)", letterSpacing: "0.08em" }} />
+                      <input type="text" inputMode="numeric" value={cardNumber} onChange={(e) => setCardNumber(fmt(e.target.value, "card"))} placeholder="0000 0000 0000 0000" maxLength={19} autoComplete="cc-number" className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)", letterSpacing: "0.08em" }} />
                     </div>
                     <div style={rowStyle}>
                       <div>
                         <label style={labelStyle}>VALIDADE</label>
-                        <input type="text" inputMode="numeric" value={expiry} onChange={(e) => setExpiry(fmt(e.target.value, "expiry"))} placeholder="MM/AA" required maxLength={5} autoComplete="cc-exp" className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} />
+                        <input type="text" inputMode="numeric" value={expiry} onChange={(e) => setExpiry(fmt(e.target.value, "expiry"))} placeholder="MM/AA" maxLength={5} autoComplete="cc-exp" className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} />
                       </div>
                       <div>
                         <label style={labelStyle}>CVV</label>
-                        <input type="text" inputMode="numeric" value={ccv} onChange={(e) => setCcv(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="123" required minLength={3} maxLength={4} autoComplete="cc-csc" className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} />
+                        <input type="text" inputMode="numeric" value={ccv} onChange={(e) => setCcv(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="123" maxLength={4} autoComplete="cc-csc" className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} />
                       </div>
                     </div>
                     <div>
                       <label style={labelStyle}>NOME NO CARTÃO</label>
-                      <input type="text" value={cardHolder} onChange={(e) => setCardHolder(e.target.value.toUpperCase())} placeholder="COMO IMPRESSO NO CARTÃO" required maxLength={100} autoComplete="cc-name" className="input-field" style={{ ...inputStyle, textTransform: "uppercase", letterSpacing: "0.04em" }} />
+                      <input type="text" value={cardHolder} onChange={(e) => setCardHolder(e.target.value.toUpperCase())} placeholder="COMO IMPRESSO NO CARTÃO" maxLength={100} autoComplete="cc-name" className="input-field" style={{ ...inputStyle, textTransform: "uppercase", letterSpacing: "0.04em" }} />
                     </div>
+                  </div>
 
-                    <div style={{ height: "1px", background: "var(--border)", margin: "4px 0" }} />
-                    <p style={{ fontSize: "11px", color: "var(--muted)", fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>DADOS DO TITULAR</p>
+                  {error && <div style={{ marginTop: "12px", background: "rgba(255,77,0,0.1)", border: "1px solid rgba(255,77,0,0.3)", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "var(--accent2)" }}>{error}</div>}
 
+                  <button
+                    onClick={() => {
+                      const digits = cardNumber.replace(/\D/g, "");
+                      if (digits.length < 13) { setError("Número do cartão inválido."); return; }
+                      if (!expiry.match(/^\d{2}\/\d{2}$/)) { setError("Validade inválida. Use MM/AA."); return; }
+                      if (ccv.length < 3) { setError("CVV inválido."); return; }
+                      if (cardHolder.trim().length < 2) { setError("Informe o nome impresso no cartão."); return; }
+                      setError("");
+                      setStep("card-holder");
+                    }}
+                    className="btn-primary"
+                    style={{ width: "100%", padding: "15px", fontSize: "15px", borderRadius: "8px", marginTop: "14px" }}
+                  >
+                    Continuar →
+                  </button>
+                  <p style={{ marginTop: "12px", fontSize: "11px", color: "var(--muted)", textAlign: "center", fontFamily: "var(--font-mono)" }}>🔒 Dados transmitidos com criptografia SSL</p>
+                </>
+              )}
+
+              {/* STEP: CARTÃO — ETAPA 2: DADOS DO TITULAR */}
+              {step === "card-holder" && (
+                <>
+                  <button onClick={() => { setStep("card-form"); setError(""); }} style={{ position: "absolute", top: "16px", left: "16px", background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--muted)", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontFamily: "var(--font-mono)" }}>← voltar</button>
+                  <div style={{ textAlign: "center", marginBottom: "20px", marginTop: "8px" }}>
+                    <h2 style={{ fontSize: "18px", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: "4px" }}>Dados do titular</h2>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--muted)", letterSpacing: "0.1em" }}>ETAPA 2 DE 2 — NECESSÁRIOS PARA ANTIFRAUDE</span>
+                  </div>
+
+                  <form onSubmit={handleCardSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                    <div>
+                      <label style={labelStyle}>CPF / CNPJ</label>
+                      <input type="text" inputMode="numeric" value={cpfCnpj} onChange={(e) => setCpfCnpj(fmt(e.target.value, "cpf"))} placeholder="000.000.000-00" required autoComplete="off" className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} />
+                    </div>
                     <div style={rowStyle}>
-                      <div>
-                        <label style={labelStyle}>CPF / CNPJ</label>
-                        <input type="text" inputMode="numeric" value={cpfCnpj} onChange={(e) => setCpfCnpj(fmt(e.target.value, "cpf"))} placeholder="000.000.000-00" required className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} />
-                      </div>
                       <div>
                         <label style={labelStyle}>TELEFONE</label>
                         <input type="text" inputMode="numeric" value={phone} onChange={(e) => setPhone(fmt(e.target.value, "phone"))} placeholder="(11) 99999-9999" required className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} />
                       </div>
-                    </div>
-                    <div style={rowStyle}>
                       <div>
                         <label style={labelStyle}>CEP</label>
                         <input type="text" inputMode="numeric" value={postalCode} onChange={(e) => setPostalCode(fmt(e.target.value, "cep"))} placeholder="00000-000" required className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} />
                       </div>
-                      <div>
-                        <label style={labelStyle}>Nº DO ENDEREÇO</label>
-                        <input type="text" value={addressNumber} onChange={(e) => setAddressNumber(e.target.value)} placeholder="123" required maxLength={20} className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} />
-                      </div>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Nº DO ENDEREÇO</label>
+                      <input type="text" value={addressNumber} onChange={(e) => setAddressNumber(e.target.value)} placeholder="123" required maxLength={20} className="input-field" style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} />
                     </div>
 
                     {error && <div style={{ background: "rgba(255,77,0,0.1)", border: "1px solid rgba(255,77,0,0.3)", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "var(--accent2)" }}>{error}</div>}
