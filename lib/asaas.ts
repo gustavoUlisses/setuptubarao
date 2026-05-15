@@ -94,12 +94,12 @@ export async function createCharge(
   };
 }
 
-export async function getCustomerEmail(customerId: string): Promise<string | null> {
+export async function getCustomerEmail(customerId: string): Promise<string | undefined> {
   try {
     const customer = await asaasRequest<AsaasCustomer>(`/customers/${customerId}`);
-    return customer.email ?? null;
+    return customer.email ?? undefined;
   } catch {
-    return null;
+    return undefined;
   }
 }
 

@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Asaas nem sempre inclui customerEmail no payload — busca via API se necessário
-  let email = payment.customerEmail;
+  let email: string | undefined = payment.customerEmail;
   if (!email && payment.customer) {
     email = await getCustomerEmail(payment.customer);
   }
